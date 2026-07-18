@@ -20,6 +20,7 @@ function page_header(string $title, ?string $nav = null): void
             . '<a href="' . APP_BASE . '/admin/relationships.php">Relationships</a>'
             . '<a href="' . APP_BASE . '/admin/assign.php">Generate</a>'
             . '<a href="' . APP_BASE . '/admin/assignments.php">Assignments</a>'
+            . '<a href="' . APP_BASE . '/admin/emails.php">Emails</a>'
             . '<a href="' . APP_BASE . '/admin/logout.php">Log out</a></nav>';
     } elseif ($nav === 'user') {
         echo '<nav><a href="' . APP_BASE . '/user/dashboard.php">Dashboard</a>'

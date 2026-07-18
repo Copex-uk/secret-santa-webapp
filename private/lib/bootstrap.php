@@ -160,6 +160,7 @@ function client_ip(): string
 require APP_PRIVATE . '/lib/db.php';
 require APP_PRIVATE . '/lib/csrf.php';
 require APP_PRIVATE . '/lib/mailer.php';
+require APP_PRIVATE . '/lib/templates.php';
 require APP_PRIVATE . '/lib/codes.php';
 require APP_PRIVATE . '/lib/auth.php';
 require APP_PRIVATE . '/lib/upload.php';

@@ -53,25 +53,25 @@ try {
 
         // Everyone with an assignment in this event gets the nudge email.
         $stmt = $pdo->prepare(
-            'SELECT u.email FROM assignments a
+            'SELECT u.email, u.first_name FROM assignments a
              JOIN users u ON u.id = a.buyer_user_id
              WHERE a.event_id = ?'
         );
         $stmt->execute([$ev['id']]);
-        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $buyers = $stmt->fetchAll();
 
         $sent = 0;
         $failed = 0;
-        foreach ($emails as $email) {
-            $ok = smtp_send(
-                (string)$email,
-                "🎁 {$eventName}: your Secret Santa draw is ready",
-                "Ho ho ho!\n\n"
-                . "The {$eventName} draw has been made. Log in to see who you're buying a present for:\n\n"
-                . "  {$loginUrl}\n\n"
-                . "Enter your email address and we'll send you a one-time login code.\n\n"
-                . "Reveal time: " . $ev['reveal_at'] . "\n"
-            );
+        $revealTs = (int)strtotime((string)$ev['reveal_at']);
+        foreach ($buyers as $buyer) {
+            $ok = send_template_email((string)$buyer['email'], 'reveal', [
+                'first_name'  => (string)($buyer['first_name'] ?? ''),
+                'email'       => (string)$buyer['email'],
+                'event_name'  => $eventName,
+                'login_url'   => $loginUrl,
+                'reveal_time' => date('H:i', $revealTs),
+                'reveal_date' => date('j M Y', $revealTs),
+            ]);
             $ok ? $sent++ : $failed++;
         }
 

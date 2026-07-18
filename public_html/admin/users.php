@@ -25,15 +25,12 @@ function send_invite_email(array $user, ?array $event): bool
 {
     $siteUrl = rtrim((string)(config()['site_url'] ?? ''), '/');
     $login = ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/login.php';
-    $evName = $event ? ($event['name'] ?: 'our Secret Santa') : 'our Secret Santa';
-    $body = "Ho ho ho!\n\n"
-        . "You have been added to " . $evName . ".\n\n"
-        . "To set up your profile, open:\n  " . $login . "\n\n"
-        . "Enter this email address and we'll send you a 6-digit login code — "
-        . "no password needed. Then add your name (and a selfie if "
-        . "you fancy) and you're in the draw.\n\n"
-        . "Shhh... it's a secret!";
-    return smtp_send((string)$user['email'], 'You are invited to ' . $evName . ' 🎅', $body);
+    return send_template_email((string)$user['email'], 'invite', [
+        'first_name' => (string)($user['first_name'] ?? ''),
+        'email'      => (string)$user['email'],
+        'event_name' => $event ? ($event['name'] ?: 'our Secret Santa') : 'our Secret Santa',
+        'login_url'  => $login,
+    ]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add') {
@@ -348,6 +345,12 @@ if ($event && $attachable): ?>
         <td class="muted"><?= e($u['memberships'] ?? '') ?: '—' ?></td>
         <td>
             <a href="<?= APP_BASE ?>/admin/users.php?edit=<?= (int)$u['id'] ?>">Edit</a>
+            <form method="post" class="inline-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="invite">
+                <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                <button type="submit" class="btn-mini" style="margin:0">Invite</button>
+            </form>
             <?php if ($event): ?>
             <form method="post" style="display:inline">
                 <?= csrf_field() ?>
@@ -356,12 +359,6 @@ if ($event && $attachable): ?>
                 <input type="hidden" name="event_id" value="<?= (int)$event['id'] ?>">
                 <button type="submit" class="danger" style="margin:0;padding:.2rem .6rem"
                         onclick="return confirm('Remove from event #<?= (int)$event['id'] ?>?')">Remove from #<?= (int)$event['id'] ?></button>
-            </form>
-            <form method="post" class="inline-form">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="invite">
-                <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
-                <button type="submit" class="btn-mini" style="margin:0">Invite</button>
             </form>
             <?php endif; ?>
         </td>

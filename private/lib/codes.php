@@ -71,12 +71,11 @@ function issue_user_login_code(string $email): void
          VALUES (?, ?, NOW() + INTERVAL ' . CODE_TTL_MINUTES . ' MINUTE)'
     )->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);
 
-    smtp_send(
-        $user['email'],
-        'Your Secret Santa login code',
-        "Hi,\n\nYour Secret Santa login code is: {$code}\n\n"
-        . 'It expires in ' . CODE_TTL_MINUTES . " minutes. If you didn't request this, you can ignore this email.\n"
-    );
+    send_template_email((string)$user['email'], 'login_code', [
+        'code'        => $code,
+        'ttl_minutes' => (string)CODE_TTL_MINUTES,
+        'email'       => (string)$user['email'],
+    ]);
 }
 
 /**

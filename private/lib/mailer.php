@@ -10,7 +10,7 @@ declare(strict_types=1);
  * Send a plain-text email through the SMTP server from config.
  * Returns true on success, false on failure (errors are logged, not shown).
  */
-function smtp_send(string $toEmail, string $subject, string $body): bool
+function smtp_send(string $toEmail, string $subject, string $body, ?string $htmlBody = null): bool
 {
     $cfg = config()['smtp'] ?? null;
     if (!$cfg) {
@@ -27,7 +27,8 @@ function smtp_send(string $toEmail, string $subject, string $body): bool
             (string)$cfg['from_name'],
             $toEmail,
             $subject,
-            $body
+            $body,
+            $htmlBody
         );
         return true;
     } catch (Throwable $t) {
@@ -46,7 +47,8 @@ function smtp_send_raw(
     string $fromName,
     string $toEmail,
     string $subject,
-    string $body
+    string $body,
+    ?string $htmlBody = null
 ): void {
     if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
         throw new RuntimeException('Invalid recipient email.');
@@ -124,13 +126,30 @@ function smtp_send_raw(
         'To: <' . $clean($toEmail) . '>',
         'Subject: ' . $encodedSubject,
         'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
         'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $clean($host) . '>',
     ];
 
+    if ($htmlBody !== null) {
+        // multipart/alternative: plain-text part first, HTML preferred.
+        $boundary = 'b' . bin2hex(random_bytes(16));
+        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+        $payload = "--$boundary\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $body . "\r\n"
+            . "--$boundary\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $htmlBody . "\r\n"
+            . "--$boundary--";
+    } else {
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $headers[] = 'Content-Transfer-Encoding: 8bit';
+        $payload = $body;
+    }
+
     // Dot-stuffing per RFC 5321
-    $bodyLines = preg_split('/\r\n|\r|\n/', $body) ?: [];
+    $bodyLines = preg_split('/\r\n|\r|\n/', $payload) ?: [];
     $stuffed = array_map(
         fn(string $l): string => (isset($l[0]) && $l[0] === '.') ? '.' . $l : $l,
         $bodyLines
