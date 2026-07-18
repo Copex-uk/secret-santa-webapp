@@ -157,3 +157,16 @@ th { background: #efece4; font-family: Verdana, sans-serif; font-size: .75rem; }
 }
 .cam-actions { display: flex; gap: .6rem; }
 #cam-preview-wrap { display: flex; align-items: center; gap: .8rem; }
+/* "Come back at" time rendered into the comeback image's box */
+.slot-comeback {
+  position: absolute;
+  left: 30%; top: 24.5%;
+  width: 46%; height: 10%;
+  display: flex; align-items: center; justify-content: center;
+  padding-left: 9%;                 /* clear the printed clock icon */
+  font-family: Georgia, serif; font-weight: bold;
+  font-size: clamp(11px, 3cqw, 22px);
+  color: #6b4d1f;
+}
+.howto { font-family: Verdana, sans-serif; font-size: .86rem; line-height: 1.65; padding-left: 1.2rem; }
+.howto li { margin-bottom: .55rem; }

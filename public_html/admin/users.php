@@ -19,6 +19,23 @@ $errors = [];
 $event = selected_event($pdo);
 
 /* ---- Add user(s) by email --------------------------------------------- */
+
+/** Send a "you're invited" email with the login link. Returns true on success. */
+function send_invite_email(array $user, ?array $event): bool
+{
+    $siteUrl = rtrim((string)(config()['site_url'] ?? ''), '/');
+    $login = ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/login.php';
+    $evName = $event ? ($event['name'] ?: 'our Secret Santa') : 'our Secret Santa';
+    $body = "Ho ho ho!\n\n"
+        . "You have been added to " . $evName . ".\n\n"
+        . "To set up your profile, open:\n  " . $login . "\n\n"
+        . "Enter this email address and we'll send you a 6-digit login code — "
+        . "no password needed. Then add your name (and a selfie if "
+        . "you fancy) and you're in the draw.\n\n"
+        . "Shhh... it's a secret!";
+    return smtp_send((string)$user['email'], 'You are invited to ' . $evName . ' 🎅', $body);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add') {
     $raw = (string)($_POST['emails'] ?? '');
     $eventId = (int)($_POST['event_id'] ?? 0);
@@ -38,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
         $userId = $stmt->fetchColumn();
         if (!$userId) {
             // Default festive avatar by gender — the user only needs to add
-            // their name and nickname to complete the profile.
+            // their name to complete the profile.
             $avatar = $gender === 'male' ? 'assets/avatar-male.webp' : 'assets/avatar-female.webp';
             $pdo->prepare('INSERT INTO users (email, gender, photo_path) VALUES (?, ?, ?)')
                 ->execute([$email, $gender, $avatar]);
@@ -54,7 +71,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
         $added++;
     }
     if ($added) {
-        flash_set('ok', "$added user(s) added" . ($eventId ? ' and attached to the event' : '') . '.');
+        // Email invitations to everyone in this batch (throttled per address).
+        $sent = 0; $failed = 0;
+        $sel = $pdo->prepare('SELECT * FROM users WHERE email = ?');
+        foreach ($emails as $em) {
+            $em = strtolower(trim($em));
+            if ($em === '' || !filter_var($em, FILTER_VALIDATE_EMAIL)) continue;
+            $sel->execute([$em]);
+            if (($u = $sel->fetch()) && throttle_allow($em, 'invite', 2, 60)) {
+                send_invite_email($u, $event) ? $sent++ : $failed++;
+            }
+        }
+        $msg = "$added user(s) added" . ($eventId ? ' and attached to the event' : '') . '.';
+        if ($sent)   $msg .= " Invitation email sent to $sent.";
+        if ($failed) $msg .= " $failed invitation(s) could not be sent (check SMTP) — use the Invite button to retry.";
+        flash_set('ok', $msg);
     }
     if (!$errors) {
         redirect('/admin/users.php' . ($eventId ? '?event_id=' . $eventId : ''));
@@ -87,11 +118,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'attac
 }
 
 /* ---- Edit a user -------------------------------------------------------- */
+/* ---- (Re)send an invitation --------------------------------------------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'invite') {
+    $uid = (int)($_POST['user_id'] ?? 0);
+    $sel = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+    $sel->execute([$uid]);
+    if ($u = $sel->fetch()) {
+        if (!throttle_allow((string)$u['email'], 'invite', 2, 60)) {
+            flash_set('err', 'Invite throttled — that address was emailed recently. Try again later.');
+        } elseif (send_invite_email($u, $event)) {
+            flash_set('ok', 'Invitation sent to ' . $u['email'] . '.');
+        } else {
+            flash_set('err', 'Could not send the invitation — check the SMTP settings.');
+        }
+    }
+    redirect('/admin/users.php' . ($event ? '?event_id=' . (int)$event['id'] : ''));
+}
+
+/* ---- Invite everyone in the event --------------------------------------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'invite_all') {
+    if (!$event) {
+        flash_set('err', 'Select an event first.');
+        redirect('/admin/users.php');
+    }
+    $includeAll = ($_POST['include_complete'] ?? '') === '1';
+    $q = $pdo->prepare(
+        'SELECT u.* FROM event_users eu
+         JOIN users u ON u.id = eu.user_id
+         WHERE eu.event_id = ? AND eu.status <> "removed"'
+        . ($includeAll ? '' : ' AND u.profile_complete = 0')
+    );
+    $q->execute([(int)$event['id']]);
+    $sent = 0; $failed = 0; $throttled = 0;
+    foreach ($q->fetchAll() as $u) {
+        if (!throttle_allow((string)$u['email'], 'invite', 2, 60)) {
+            $throttled++;
+            continue;
+        }
+        send_invite_email($u, $event) ? $sent++ : $failed++;
+    }
+    $msg = "Invitations: $sent sent";
+    if ($failed)    $msg .= ", $failed failed (check SMTP)";
+    if ($throttled) $msg .= ", $throttled skipped (emailed recently — throttle is 2/hour per address)";
+    if (!$sent && !$failed && !$throttled) $msg = $includeAll
+        ? 'Nobody in this event to invite.'
+        : 'Everyone in this event has already completed their profile — tick the box to email them anyway.';
+    flash_set($failed ? 'err' : 'ok', $msg . '.');
+    redirect('/admin/users.php?event_id=' . (int)$event['id']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit') {
     $id    = (int)($_POST['id'] ?? 0);
     $first = trim((string)($_POST['first_name'] ?? ''));
     $last  = trim((string)($_POST['last_name'] ?? ''));
-    $nick  = trim((string)($_POST['nickname'] ?? ''));
 
     $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
     $stmt->execute([$id]);
@@ -100,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
     if (!$target) {
         $errors[] = 'User not found.';
     }
-    foreach ([['First name', $first], ['Last name', $last], ['Nickname', $nick]] as [$labelName, $v]) {
+    foreach ([['First name', $first], ['Last name', $last]] as [$labelName, $v]) {
         if (mb_strlen($v) > 100) {
             $errors[] = "$labelName is too long (max 100).";
         }
@@ -121,10 +200,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
             delete_photo($target['photo_path']);
         }
         $photo = $newPhoto ?? $target['photo_path'];
-        $complete = ($first !== '' && $last !== '' && $nick !== '' && $photo) ? 1 : (int)$target['profile_complete'];
+        $complete = ($first !== '' && $last !== '' && $photo) ? 1 : (int)$target['profile_complete'];
         $pdo->prepare(
-            'UPDATE users SET first_name = ?, last_name = ?, nickname = ?, photo_path = ?, profile_complete = ? WHERE id = ?'
-        )->execute([$first ?: null, $last ?: null, $nick ?: null, $photo, $complete, $id]);
+            'UPDATE users SET first_name = ?, last_name = ?, photo_path = ?, profile_complete = ? WHERE id = ?'
+        )->execute([$first ?: null, $last ?: null, $photo, $complete, $id]);
         flash_set('ok', 'User updated.');
         redirect('/admin/users.php');
     }
@@ -170,7 +249,6 @@ if ($editUser): ?>
         <?php endif; ?>
         <label>First name</label><input type="text" name="first_name" maxlength="100" value="<?= e($editUser['first_name'] ?? '') ?>">
         <label>Last name</label><input type="text" name="last_name" maxlength="100" value="<?= e($editUser['last_name'] ?? '') ?>">
-        <label>Nickname</label><input type="text" name="nickname" maxlength="100" value="<?= e($editUser['nickname'] ?? '') ?>">
         <label>Replace photo (JPG/PNG, max <?= e(photo_max_label()) ?>)</label><input type="file" name="photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
         <button type="submit">Save</button> <a class="btn" href="<?= APP_BASE ?>/admin/users.php">Cancel</a>
     </form>
@@ -181,7 +259,7 @@ if ($editUser): ?>
 $attachable = [];
 if ($event) {
     $q = $pdo->prepare(
-        'SELECT u.id, u.email, u.first_name, u.last_name, u.nickname, u.photo_path
+        'SELECT u.id, u.email, u.first_name, u.last_name, u.photo_path
          FROM users u
          LEFT JOIN event_users eu ON eu.user_id = u.id AND eu.event_id = ? AND eu.status <> "removed"
          WHERE eu.user_id IS NULL
@@ -213,6 +291,21 @@ if ($event && $attachable): ?>
 </form>
 <?php endif; ?>
 
+<?php if ($event): ?>
+<form method="post" class="card">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="invite_all">
+    <h2>Invite everyone in “<?= e($event['name'] ?: ('Event #' . $event['id'])) ?>”</h2>
+    <p class="muted">Emails the login link to members of this event who haven't set up
+       their profile yet. Each address is limited to 2 invites per hour.</p>
+    <label class="attach-opt" style="max-width:max-content">
+        <input type="checkbox" name="include_complete" value="1">
+        Also email people who already finished their profile
+    </label>
+    <button type="submit">Send invitations</button>
+</form>
+<?php endif; ?>
+
 <form method="post" class="card">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="add">
@@ -227,7 +320,7 @@ if ($event && $attachable): ?>
             <img src="<?= APP_BASE ?>/assets/avatar-male.webp" alt=""> Male</label>
     </div>
     <p class="muted">The chosen avatar is set as their photo, so they only need to add
-       their name and nickname to be ready for the draw. They can replace it with a
+       their name to be ready for the draw. They can replace it with a
        real selfie any time. Applies to every address in this batch.</p>
     <label>Attach to event</label>
     <select name="event_id">
@@ -243,7 +336,7 @@ if ($event && $attachable): ?>
 
 <h2>All users</h2>
 <table>
-    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Nickname</th><th>Profile</th><th>Events (id:status)</th><th></th></tr>
+    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Profile</th><th>Events (id:status)</th><th></th></tr>
     <?php foreach ($users as $u): ?>
     <tr>
         <td><?php if (!empty($u['photo_path'])): ?>
@@ -251,7 +344,6 @@ if ($event && $attachable): ?>
             <?php else: ?><span class="muted">none</span><?php endif; ?></td>
         <td><?= e($u['email']) ?></td>
         <td><?= e(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) ?: '—' ?></td>
-        <td><?= e($u['nickname'] ?? '') ?: '—' ?></td>
         <td><?= (int)$u['profile_complete'] === 1 ? '✅' : '⏳' ?></td>
         <td class="muted"><?= e($u['memberships'] ?? '') ?: '—' ?></td>
         <td>
@@ -264,6 +356,12 @@ if ($event && $attachable): ?>
                 <input type="hidden" name="event_id" value="<?= (int)$event['id'] ?>">
                 <button type="submit" class="danger" style="margin:0;padding:.2rem .6rem"
                         onclick="return confirm('Remove from event #<?= (int)$event['id'] ?>?')">Remove from #<?= (int)$event['id'] ?></button>
+            </form>
+            <form method="post" class="inline-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="invite">
+                <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                <button type="submit" class="btn-mini" style="margin:0">Invite</button>
             </form>
             <?php endif; ?>
         </td>

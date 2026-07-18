@@ -20,6 +20,32 @@ $events = $pdo->query('SELECT * FROM events ORDER BY id DESC LIMIT 10')->fetchAl
 page_header('Admin dashboard', 'admin');
 flash_show();
 ?>
+<div class="card">
+    <h2>How it all works</h2>
+    <ol class="howto">
+        <li><strong>Create an event</strong> (Events page): give it a name, an optional
+            £ max gift spend, a <em>reveal date</em> and a <em>reveal time</em>.
+            On the reveal date everyone automatically gets a "log in to find out who
+            you got" email — at 09:00, or just after midnight for early reveals.</li>
+        <li><strong>Add people</strong> (Users page): type their email addresses and pick a
+            default avatar. Each person is emailed an invitation with the login link —
+            they sign in with a 6-digit emailed code (no passwords) and only need to
+            enter their name to be ready. Selfies are optional and can be taken with
+            a phone camera or webcam. Use the <em>Invite</em> button to resend.</li>
+        <li><strong>Mark couples</strong> (Relationships page) so partners never draw
+            each other.</li>
+        <li><strong>Generate</strong> (Generate page): creates the secret pairings.
+            It refuses cleanly if the couples make a valid draw impossible.</li>
+        <li><strong>The reveal:</strong> before the reveal date users see
+            "Please Standby" on their card; on the day but before the time they see
+            "Too early — come back at&nbsp;…"; from the reveal moment the card spins
+            and lands on who they're buying for. Assignments here stay masked
+            unless you re-enter your admin password, so you won't spoil your own draw.</li>
+    </ol>
+</div>
+<?php
+
+?>
 <p class="muted">Signed in as <?= e($admin['email']) ?></p>
 <div class="card">
     <p><strong><?= $counts['users'] ?></strong> users (<?= $counts['complete'] ?> with complete profiles) ·

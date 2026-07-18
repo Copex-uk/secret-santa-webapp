@@ -12,8 +12,9 @@ unset($d);
  *
  * The photo circle spins (blurred) through all participants of the event,
  * then lands on:
- *   - the recipient's photo + nickname  ......... after reveal_at
- *   - the "Please Standby" placeholder .......... before reveal_at
+ *   - the recipient's photo + first name ........ after the reveal moment
+ *   - "Come back at HH:MM" ...................... on the reveal day, early
+ *   - the "Please Standby" placeholder .......... before the reveal day
  *
  * Recipient data is only queried when reveal_at <= NOW() (enforced in SQL),
  * so nothing can leak through this endpoint early. The spin photos are the
@@ -65,14 +66,30 @@ foreach ($events as $ev) {
     );
     shuffle($spin);
 
-    $finalImg  = APP_BASE . '/assets/standby.webp';
-    $finalName = 'Revealed ' . date('j M, H:i', strtotime((string)$ev['reveal_at']));
-    $recipient = null;
+    $revealTs   = (int)strtotime((string)$ev['reveal_at']);
+    $revealDay  = date('Y-m-d', $revealTs);
+    $revealTime = date('H:i', $revealTs);
+    $recipient  = null;
+    $comebackAt = '';
+
+    if ($revealed) {
+        $finalImg  = APP_BASE . '/assets/standby.webp';
+        $finalName = '';
+    } elseif (date('Y-m-d') === $revealDay) {
+        // Reveal day, but too early: "Come back at HH:MM".
+        $finalImg   = APP_BASE . '/assets/comeback.webp';
+        $finalName  = 'Too early! Come back at ' . $revealTime;
+        $comebackAt = $revealTime;
+    } else {
+        // Before the reveal day: just stand by.
+        $finalImg  = APP_BASE . '/assets/standby.webp';
+        $finalName = 'Reveal day is ' . date('j M', $revealTs);
+    }
 
     if ($revealed) {
         // Defensive re-check of the reveal time inside the sensitive query.
         $stmt2 = $pdo->prepare(
-            'SELECT r.nickname, r.photo_path
+            'SELECT r.first_name, r.photo_path
              FROM assignments a
              JOIN users r ON r.id = a.recipient_user_id
              JOIN events ev ON ev.id = a.event_id
@@ -81,7 +98,7 @@ foreach ($events as $ev) {
         $stmt2->execute([$ev['id'], $user['id']]);
         $recipient = $stmt2->fetch();
         if ($recipient) {
-            $finalName = (string)$recipient['nickname'];
+            $finalName = (string)($recipient['first_name'] ?: 'your giftee');
             if (!empty($recipient['photo_path'])) {
                 $finalImg = APP_BASE . '/' . (string)$recipient['photo_path'];
             }
@@ -101,8 +118,10 @@ foreach ($events as $ev) {
          data-photos="<?= e(json_encode($spin)) ?>"
          data-final-img="<?= e($finalImg) ?>"
          data-final-name="<?= e($finalName) ?>"
-         data-revealed="<?= $revealed ? '1' : '0' ?>">
-        <div class="slot-photo"><img src="<?= e($finalImg) ?>" alt=""></div>
+         data-revealed="<?= $revealed ? '1' : '0' ?>"
+         data-comeback="<?= e($comebackAt) ?>">
+        <div class="slot-photo"><img src="<?= e($finalImg) ?>" alt="">
+            <div class="slot-comeback" hidden><?= e($comebackAt) ?></div></div>
         <div class="slot-name"></div>
         <div class="slot-spend"><?= e($budget) ?></div>
     </div>
@@ -122,10 +141,15 @@ document.querySelectorAll('.reveal-slot').forEach(function (slot) {
     // Preload everything so the spin doesn't stutter.
     photos.concat([finalImg]).forEach(function (u) { (new Image()).src = u; });
 
-    if (photos.length < 2) {           // nothing to spin through
-        img.src = finalImg;
+    var comebackEl = slot.querySelector('.slot-comeback');
+    function settle() {
         nameEl.textContent = finalName;
         nameEl.classList.add(revealed ? 'is-final' : 'is-waiting');
+        if (slot.dataset.comeback) comebackEl.hidden = false;
+    }
+    if (photos.length < 2) {           // nothing to spin through
+        img.src = finalImg;
+        settle();
         return;
     }
 
@@ -144,8 +168,7 @@ document.querySelectorAll('.reveal-slot').forEach(function (slot) {
             img.src = finalImg;
             img.classList.remove('spinning');
             img.classList.add('landed');
-            nameEl.textContent = finalName;
-            nameEl.classList.add(revealed ? 'is-final' : 'is-waiting');
+            settle();
         }
     }
     setTimeout(tick, 350);

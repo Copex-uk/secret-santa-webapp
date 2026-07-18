@@ -31,15 +31,26 @@ function validate_event_input(array &$errors): array
             $budgetVal = round((float)$budget, 2);
         }
     }
-    $sendTs   = strtotime((string)($_POST['email_send_at'] ?? ''));
-    $revealTs = strtotime((string)($_POST['reveal_at'] ?? ''));
+    $date = (string)($_POST['reveal_date'] ?? '');
+    $time = (string)($_POST['reveal_time'] ?? '');
     if (mb_strlen($name) > 190) $errors[] = 'Event name is too long.';
-    if (!$sendTs)               $errors[] = 'Email send date/time is invalid.';
-    if (!$revealTs)             $errors[] = 'Reveal date/time is invalid.';
-    if ($sendTs && $revealTs && $revealTs < $sendTs) {
-        $errors[] = 'Reveal must be at the same time as, or after, the email send time.';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) {
+        $errors[] = 'Reveal date is invalid.';
     }
-    return [$name !== '' ? $name : null, $budgetVal, (int)$sendTs, (int)$revealTs];
+    if (!preg_match('/^\d{2}:\d{2}$/', $time)) {
+        $errors[] = 'Reveal time is invalid.';
+    }
+    $revealTs = $errors ? 0 : (int)strtotime("$date $time");
+    /*
+     * The nudge email goes out ON the reveal date: at 09:00 for an evening
+     * reveal, or right after midnight when the reveal itself is that early.
+     */
+    $sendTs = 0;
+    if ($revealTs) {
+        $morning = (int)strtotime("$date 09:00");
+        $sendTs  = ($revealTs > $morning) ? $morning : (int)strtotime("$date 00:05");
+    }
+    return [$name !== '' ? $name : null, $budgetVal, $sendTs, $revealTs];
 }
 
 /* ---- Create ------------------------------------------------------------- */
@@ -108,7 +119,6 @@ page_header('Events', 'admin');
 flash_show();
 foreach ($errors as $err) echo '<div class="flash err">' . e($err) . '</div>';
 
-$f = fn(?string $dt) => $dt ? date('Y-m-d\TH:i', strtotime($dt)) : '';
 ?>
 <form method="post" class="card">
     <?= csrf_field() ?>
@@ -126,10 +136,12 @@ $f = fn(?string $dt) => $dt ? date('Y-m-d\TH:i', strtotime($dt)) : '';
     <label>Max gift spend (£, optional — shown on everyone's reveal card)</label>
     <input type="number" name="budget" min="1" max="999999" step="0.01" placeholder="e.g. 25"
            value="<?= $editing && $editing['budget'] !== null ? e((string)(0 + $editing['budget'])) : '' ?>">
-    <label>Reveal emails go out at</label>
-    <input type="datetime-local" name="email_send_at" required value="<?= e($f($editing['email_send_at'] ?? null)) ?>">
-    <label>Users can see their recipient at (same time or later)</label>
-    <input type="datetime-local" name="reveal_at" required value="<?= e($f($editing['reveal_at'] ?? null)) ?>">
+    <label>Reveal date — the "log in" email goes out that morning (09:00)</label>
+    <input type="date" name="reveal_date" required
+           value="<?= $editing ? e(date('Y-m-d', strtotime((string)$editing['reveal_at']))) : '' ?>">
+    <label>Reveal time — recipients become visible at this moment</label>
+    <input type="time" name="reveal_time" required
+           value="<?= $editing ? e(date('H:i', strtotime((string)$editing['reveal_at']))) : '' ?>">
     <button type="submit"><?= $editing ? 'Save changes' : 'Create event' ?></button>
     <?php if ($editing): ?> <a class="btn" href="<?= APP_BASE ?>/admin/events.php">Cancel</a><?php endif; ?>
 </form>

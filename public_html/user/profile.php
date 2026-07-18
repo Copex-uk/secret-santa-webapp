@@ -8,7 +8,7 @@ require $d . '/private/lib/bootstrap.php';
 unset($d);
 
 /**
- * /user/profile.php — first/last name, nickname and selfie upload.
+ * /user/profile.php — first/last name and selfie upload.
  */
 
 $user = require_user();
@@ -18,11 +18,9 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $first = trim((string)($_POST['first_name'] ?? ''));
     $last  = trim((string)($_POST['last_name'] ?? ''));
-    $nick  = trim((string)($_POST['nickname'] ?? ''));
 
     if ($first === '' || mb_strlen($first) > 100) $errors[] = 'First name is required (max 100 chars).';
     if ($last === ''  || mb_strlen($last) > 100)  $errors[] = 'Last name is required (max 100 chars).';
-    if ($nick === ''  || mb_strlen($nick) > 100)  $errors[] = 'Nickname is required (max 100 chars).';
 
     // Photo: required the first time, optional (replace) afterwards.
     $newPhoto = null;
@@ -44,10 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $photoPath = $newPhoto ?? $user['photo_path'];
         $stmt = $pdo->prepare(
-            'UPDATE users SET first_name = ?, last_name = ?, nickname = ?, photo_path = ?, profile_complete = 1
+            'UPDATE users SET first_name = ?, last_name = ?, photo_path = ?, profile_complete = 1
              WHERE id = ?'
         );
-        $stmt->execute([$first, $last, $nick, $photoPath, $user['id']]);
+        $stmt->execute([$first, $last, $photoPath, $user['id']]);
 
         // Bump per-event status from invited -> profile_complete (leave later states alone)
         $pdo->prepare(
@@ -72,8 +70,6 @@ foreach ($errors as $err) echo '<div class="flash err">' . e($err) . '</div>';
     <input type="text" name="first_name" required maxlength="100" value="<?= e($user['first_name'] ?? '') ?>">
     <label>Last name</label>
     <input type="text" name="last_name" required maxlength="100" value="<?= e($user['last_name'] ?? '') ?>">
-    <label>Nickname (shown to your Secret Santa)</label>
-    <input type="text" name="nickname" required maxlength="100" value="<?= e($user['nickname'] ?? '') ?>">
     <label>Selfie photo (JPG/PNG, max <?= e(photo_max_label()) ?>)<?= empty($user['photo_path']) ? ' — required' : ' — leave empty to keep current' ?></label>
     <input type="file" name="photo" id="photo-input" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
     <div class="cam-row">

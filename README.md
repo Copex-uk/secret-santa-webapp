@@ -15,7 +15,7 @@ through all participants before landing on your giftee — or on a "Please
 Standby" card before the reveal moment. Selfie upload from file, webcam or
 phone camera, with server-side downscaling and EXIF/GPS stripping. Gendered
 default avatars so newly invited users only need to type their name to be
-draw-ready. Admin tools for events (create / edit / delete / per-event
+draw-ready, and automatic invitation emails when users are added. Admin tools for events (create / edit / delete / per-event
 budget), participants, couple exclusions, and a masked assignments view that
 requires password re-entry to unmask. Assignment generation is a
 backtracking perfect-matching solver that honours exclusions and fails

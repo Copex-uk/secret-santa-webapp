@@ -62,11 +62,22 @@ if (!app_installed()) {
         if (strlen($adPass) < 10)                               $errors[] = 'Admin password must be at least 10 characters.';
 
         if (!$errors) {
+            // Preflight: refuse to touch the database if we can't finish.
+            $cfgDir = dirname(APP_CONFIG_FILE);
+            if (!is_dir($cfgDir) || !is_writable($cfgDir)) {
+                $errors[] = 'The config directory (' . $cfgDir . ') is not writable — '
+                    . 'fix permissions first (owner www-data / UID 33). Nothing was installed.';
+            }
+        }
+        if (!$errors) {
             try {
                 $pdo = make_pdo($dbHost, $dbName, $dbUser, $dbPass); // test connection
                 run_schema($pdo);                                   // create tables
 
-                $stmt = $pdo->prepare('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)');
+                $stmt = $pdo->prepare(
+                    'INSERT INTO admin_users (email, password_hash) VALUES (?, ?)
+                     ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)'
+                );
                 $stmt->execute([$adEmail, password_hash($adPass, PASSWORD_BCRYPT)]);
 
                 // Write config OUTSIDE the webroot, atomically.

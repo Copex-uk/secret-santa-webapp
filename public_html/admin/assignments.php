@@ -56,8 +56,8 @@ $unmasked = admin_unmasked();
 /* ---- Query: recipient columns are only ever selected when unmasked ------ */
 if ($unmasked) {
     $stmt = $pdo->prepare(
-        'SELECT b.email AS buyer_email, b.nickname AS buyer_nick,
-                r.email AS recipient_email, r.nickname AS recipient_nick,
+        'SELECT b.email AS buyer_email, CONCAT_WS(" ", b.first_name, b.last_name) AS buyer_nick,
+                r.email AS recipient_email, CONCAT_WS(" ", r.first_name, r.last_name) AS recipient_nick,
                 a.created_at
          FROM assignments a
          JOIN users b ON b.id = a.buyer_user_id
@@ -66,7 +66,7 @@ if ($unmasked) {
     );
 } else {
     $stmt = $pdo->prepare(
-        'SELECT b.email AS buyer_email, b.nickname AS buyer_nick, a.created_at
+        'SELECT b.email AS buyer_email, CONCAT_WS(" ", b.first_name, b.last_name) AS buyer_nick, a.created_at
          FROM assignments a
          JOIN users b ON b.id = a.buyer_user_id
          WHERE a.event_id = ? ORDER BY b.email'

@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
 // Event members for the pickers
 $stmt = $pdo->prepare(
-    'SELECT u.id, u.email, u.nickname FROM event_users eu
+    'SELECT u.id, u.email, u.first_name, u.last_name FROM event_users eu
      JOIN users u ON u.id = eu.user_id
      WHERE eu.event_id = ? AND eu.status <> "removed" ORDER BY u.email'
 );
@@ -96,14 +96,14 @@ foreach ($errors as $err) echo '<div class="flash err">' . e($err) . '</div>';
     <select name="user_a" required>
         <option value="">— choose —</option>
         <?php foreach ($members as $m): ?>
-            <option value="<?= (int)$m['id'] ?>"><?= e($m['email']) ?><?= $m['nickname'] ? ' (' . e($m['nickname']) . ')' : '' ?></option>
+            <option value="<?= (int)$m['id'] ?>"><?= e($m['email']) ?><?= trim(($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? '')) !== '' ? ' (' . e(trim($m['first_name'] . ' ' . $m['last_name'])) . ')' : '' ?></option>
         <?php endforeach; ?>
     </select>
     <label>Person B</label>
     <select name="user_b" required>
         <option value="">— choose —</option>
         <?php foreach ($members as $m): ?>
-            <option value="<?= (int)$m['id'] ?>"><?= e($m['email']) ?><?= $m['nickname'] ? ' (' . e($m['nickname']) . ')' : '' ?></option>
+            <option value="<?= (int)$m['id'] ?>"><?= e($m['email']) ?><?= trim(($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? '')) !== '' ? ' (' . e(trim($m['first_name'] . ' ' . $m['last_name'])) . ')' : '' ?></option>
         <?php endforeach; ?>
     </select>
     <button type="submit">Save pair</button>
