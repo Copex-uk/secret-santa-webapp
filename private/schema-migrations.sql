@@ -11,3 +11,6 @@ CREATE TABLE IF NOT EXISTS email_templates (
     body_html MEDIUMTEXT NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- v1.4: track when the invitation email was last sent
+ALTER TABLE users ADD COLUMN invited_at DATETIME NULL AFTER photo_path;

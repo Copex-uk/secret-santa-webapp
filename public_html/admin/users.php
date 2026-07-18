@@ -25,12 +25,17 @@ function send_invite_email(array $user, ?array $event): bool
 {
     $siteUrl = rtrim((string)(config()['site_url'] ?? ''), '/');
     $login = ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/login.php';
-    return send_template_email((string)$user['email'], 'invite', [
+    $ok = send_template_email((string)$user['email'], 'invite', [
         'first_name' => (string)($user['first_name'] ?? ''),
         'email'      => (string)$user['email'],
         'event_name' => $event ? ($event['name'] ?: 'our Secret Santa') : 'our Secret Santa',
         'login_url'  => $login,
     ]);
+    if ($ok) {
+        db()->prepare('UPDATE users SET invited_at = NOW() WHERE id = ?')
+            ->execute([(int)$user['id']]);
+    }
+    return $ok;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add') {
@@ -68,21 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
         $added++;
     }
     if ($added) {
-        // Email invitations to everyone in this batch (throttled per address).
-        $sent = 0; $failed = 0;
-        $sel = $pdo->prepare('SELECT * FROM users WHERE email = ?');
-        foreach ($emails as $em) {
-            $em = strtolower(trim($em));
-            if ($em === '' || !filter_var($em, FILTER_VALIDATE_EMAIL)) continue;
-            $sel->execute([$em]);
-            if (($u = $sel->fetch()) && throttle_allow($em, 'invite', 2, 60)) {
-                send_invite_email($u, $event) ? $sent++ : $failed++;
-            }
-        }
-        $msg = "$added user(s) added" . ($eventId ? ' and attached to the event' : '') . '.';
-        if ($sent)   $msg .= " Invitation email sent to $sent.";
-        if ($failed) $msg .= " $failed invitation(s) could not be sent (check SMTP) — use the Invite button to retry.";
-        flash_set('ok', $msg);
+        flash_set('ok', "$added user(s) added" . ($eventId ? ' and attached to the event' : '')
+            . '. No emails were sent — use the Invite buttons when you are ready.');
     }
     if (!$errors) {
         redirect('/admin/users.php' . ($eventId ? '?event_id=' . $eventId : ''));
@@ -333,7 +325,7 @@ if ($event && $attachable): ?>
 
 <h2>All users</h2>
 <table>
-    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Profile</th><th>Events (id:status)</th><th></th></tr>
+    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Profile</th><th>Invited</th><th>Events (id:status)</th><th></th></tr>
     <?php foreach ($users as $u): ?>
     <tr>
         <td><?php if (!empty($u['photo_path'])): ?>
@@ -342,6 +334,7 @@ if ($event && $attachable): ?>
         <td><?= e($u['email']) ?></td>
         <td><?= e(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) ?: '—' ?></td>
         <td><?= (int)$u['profile_complete'] === 1 ? '✅' : '⏳' ?></td>
+        <td class="muted"><?= !empty($u['invited_at']) ? '✉️ ' . e(date('j M H:i', strtotime((string)$u['invited_at']))) : '—' ?></td>
         <td class="muted"><?= e($u['memberships'] ?? '') ?: '—' ?></td>
         <td>
             <a href="<?= APP_BASE ?>/admin/users.php?edit=<?= (int)$u['id'] ?>">Edit</a>
