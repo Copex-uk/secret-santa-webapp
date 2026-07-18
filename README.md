@@ -125,7 +125,7 @@ The pages locate `private/` relative to the webroot's parent directory
 
 1. **Create the database** in cPanel → *MySQL Databases*: create a database,
    a DB user, and grant the user ALL privileges on the database. Note the
-   full (prefixed) names, e.g. `scott_ssanta` / `scott_ssuser`.
+   full (prefixed) names, e.g. `myuser_ssanta` / `myuser_ssuser`.
 
 2. **Upload files** with File Manager or SFTP. The app is layout-agnostic —
    each page walks up the directory tree until it finds `private/`, and all

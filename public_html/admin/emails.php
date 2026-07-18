@@ -67,7 +67,7 @@ function sample_template_vars(string $key): array
 {
     $siteUrl = rtrim((string)(config()['site_url'] ?? ''), '/');
     return [
-        'first_name'  => 'Scott',
+        'first_name'  => 'Santa',
         'email'       => 'you@example.com',
         'event_name'  => 'Family Secret Santa',
         'login_url'   => ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/login.php',

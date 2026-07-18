@@ -136,11 +136,21 @@ function issue_admin_mfa(int $adminId, string $adminEmail): bool
          VALUES (?, ?, NOW() + INTERVAL ' . CODE_TTL_MINUTES . ' MINUTE)'
     )->execute([$adminId, password_hash($code, PASSWORD_BCRYPT)]);
 
+    $ttl = CODE_TTL_MINUTES;
+    $html = email_wrap(
+        '<h1 style="margin:0 0 12px;font-size:24px;color:#8e1f17;">Admin verification</h1>'
+        . '<p style="font-size:34px;letter-spacing:8px;font-weight:bold;color:#1e5c3f;margin:18px 0;">'
+        . htmlspecialchars($code, ENT_QUOTES) . '</p>'
+        . "<p>Enter this code to finish signing in to the admin area. It expires in {$ttl} minutes and works once.</p>"
+        . '<p style="color:#7a6f5c;">If this wasn\'t you, someone knows your admin password — change it.</p>'
+    );
     return smtp_send(
         $adminEmail,
-        'Your admin verification code',
+        'Your admin verification code: ' . $code,
         "Your Secret Santa admin verification code is: {$code}\n\n"
-        . 'It expires in ' . CODE_TTL_MINUTES . " minutes.\n"
+        . "It expires in {$ttl} minutes and works once.\n"
+        . "If this wasn't you, someone knows your admin password — change it.\n",
+        $html
     );
 }
 
