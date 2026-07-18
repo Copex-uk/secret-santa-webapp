@@ -10,6 +10,10 @@ function page_header(string $title, ?string $nav = null): void
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>' . e($title) . ' · Secret Santa</title>'
+        . '<link rel="icon" href="' . APP_BASE . '/favicon.ico" sizes="any">'
+        . '<link rel="icon" type="image/png" sizes="32x32" href="' . APP_BASE . '/assets/favicon-32.png">'
+        . '<link rel="icon" type="image/png" sizes="192x192" href="' . APP_BASE . '/assets/favicon-192.png">'
+        . '<link rel="apple-touch-icon" href="' . APP_BASE . '/assets/apple-touch-icon.png">'
         . '<link rel="stylesheet" href="' . APP_BASE . '/assets/style.css"></head><body>';
     echo '<header class="topbar"><span class="brand">'
         . '<img src="' . APP_BASE . '/assets/logo.webp" alt="Secret Santa"></span>';
@@ -58,6 +62,10 @@ function auth_page_header(string $subtitle): void
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>Secret Santa</title>'
+        . '<link rel="icon" href="' . APP_BASE . '/favicon.ico" sizes="any">'
+        . '<link rel="icon" type="image/png" sizes="32x32" href="' . APP_BASE . '/assets/favicon-32.png">'
+        . '<link rel="icon" type="image/png" sizes="192x192" href="' . APP_BASE . '/assets/favicon-192.png">'
+        . '<link rel="apple-touch-icon" href="' . APP_BASE . '/assets/apple-touch-icon.png">'
         . '<link rel="stylesheet" href="' . APP_BASE . '/assets/style.css">'
         . '<link rel="stylesheet" href="' . APP_BASE . '/assets/auth.css"></head>'
         . '<body class="auth-body"><div class="auth-veil"></div>'

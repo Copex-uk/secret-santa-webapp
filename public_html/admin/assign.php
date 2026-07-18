@@ -20,7 +20,7 @@ $event = selected_event($pdo);
 
 if (!$event) {
     page_header('Generate assignments', 'admin');
-    echo '<p>No events exist yet — <a href="<?= APP_BASE ?>/admin/events.php">create one first</a>.</p>';
+    echo '<p>No events exist yet — <a href="' . APP_BASE . '/admin/events.php">create one first</a>.</p>';
     page_footer();
     exit;
 }
