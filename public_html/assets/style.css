@@ -1,0 +1,159 @@
+/* Secret Santa — small shared stylesheet */
+:root {
+  --ink: #1f2a24;
+  --paper: #f7f5f0;
+  --card: #ffffff;
+  --pine: #1e5c3f;
+  --pine-dark: #14432e;
+  --berry: #b3382f;
+  --line: #ddd8ce;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.55 Georgia, 'Times New Roman', serif;
+  color: var(--ink);
+  background: #0a1226 url('site-bg.jpg') center / cover no-repeat fixed;
+}
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  padding: .5rem 1.25rem;
+  background: rgba(8, 20, 15, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.topbar .brand { display: flex; align-items: center; }
+.topbar .brand img { height: 30px; width: auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+.topbar nav a { color: #eaf3ee; margin-right: 1rem; text-decoration: none; font-family: Verdana, sans-serif; font-size: .85rem; }
+.topbar nav a:hover { text-decoration: underline; }
+.wrap {
+  max-width: 880px; margin: 1.6rem auto 3rem; padding: 1.5rem 1.75rem 2rem;
+  background: rgba(247, 245, 240, 0.94);
+  border-radius: 16px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+}
+@media (max-width: 920px) { .wrap { margin: 0.8rem 0.8rem 2rem; } }
+h1 { font-size: 1.6rem; margin: .5rem 0 1rem; color: var(--pine-dark); }
+h2 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 1.25rem; margin: 1rem 0;
+}
+label { display: block; margin: .8rem 0 .25rem; font-family: Verdana, sans-serif; font-size: .8rem; }
+input[type=text], input[type=email], input[type=password], input[type=number],
+input[type=datetime-local], select {
+  width: 100%; max-width: 420px; padding: .5rem .6rem;
+  border: 1px solid var(--line); border-radius: 5px; font: inherit; background: #fff;
+}
+button, .btn {
+  display: inline-block; margin-top: 1rem; padding: .55rem 1.2rem;
+  background: var(--pine); color: #fff; border: 0; border-radius: 5px;
+  font: .9rem Verdana, sans-serif; cursor: pointer; text-decoration: none;
+}
+button:hover, .btn:hover { background: var(--pine-dark); }
+button.danger { background: var(--berry); }
+.flash { padding: .7rem 1rem; border-radius: 6px; margin: 1rem 0; font-family: Verdana, sans-serif; font-size: .85rem; }
+.flash.ok { background: #e3f0e8; border: 1px solid var(--pine); }
+.flash.err { background: #f7e3e1; border: 1px solid var(--berry); }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: var(--card); }
+th, td { border: 1px solid var(--line); padding: .5rem .7rem; text-align: left; font-size: .9rem; }
+th { background: #efece4; font-family: Verdana, sans-serif; font-size: .75rem; }
+.muted { color: #6c6f6a; font-size: .85rem; }
+.avatar { width: 48px; height: 48px; object-fit: cover; border-radius: 50%; border: 2px solid var(--line); }
+.avatar-lg { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 3px solid var(--pine); }
+.reveal {
+  font-size: 1.35rem; text-align: center; padding: 2rem;
+  background: var(--card); border: 2px dashed var(--berry); border-radius: 10px;
+}
+.masked { color: #999; letter-spacing: .2em; }
+/* Gender / default-avatar picker on the admin add-users form */
+.gender-pick { display: flex; gap: 1.5rem; margin: .4rem 0 .2rem; }
+.gender-opt {
+  display: flex; align-items: center; gap: .55rem;
+  font-family: Verdana, sans-serif; font-size: .85rem;
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: .45rem .9rem .45rem .6rem; cursor: pointer; background: #fff;
+}
+.gender-opt img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.gender-opt:has(input:checked) { border-color: var(--pine); box-shadow: 0 0 0 2px rgba(30,92,63,.18); }
+/* --- Slot-machine reveal card (user dashboard) --------------------------- */
+.ev-title { text-align: center; }
+.reveal-slot {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto 2.2rem;
+  aspect-ratio: 1402 / 1122;
+  background: url('reveal-card.jpg') center / contain no-repeat;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0,0,0,.25);
+}
+.slot-photo {
+  position: absolute;
+  left: 38%; top: 9.2%;
+  width: 22.6%; aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e9e5dc;
+}
+.slot-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: filter .45s ease;
+}
+.slot-photo img.spinning { filter: blur(9px) saturate(1.1); }
+.slot-photo img.landed { filter: none; animation: slot-pop .5s ease; }
+@keyframes slot-pop {
+  0% { transform: scale(.92); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.slot-name {
+  position: absolute;
+  left: 26.5%; top: 61.5%;
+  width: 52.5%; height: 9.2%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: Georgia, serif;
+  font-size: clamp(15px, 4.2cqw, 34px);
+  color: #8e1f17;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.slot-name.is-final { font-weight: bold; animation: slot-pop .5s ease; }
+.slot-name.is-waiting { font-size: clamp(12px, 2.6cqw, 20px); color: #7a6f5c; }
+.slot-spend {
+  position: absolute;
+  left: 44.5%; top: 82%;
+  width: 21%; height: 8.2%;
+  display: flex; align-items: center;
+  font-family: Verdana, sans-serif;
+  font-weight: bold;
+  font-size: clamp(14px, 3.4cqw, 28px);
+  color: #1e5c3f;
+}
+.reveal-slot { container-type: inline-size; }
+.inline-form { display: inline; }
+.btn-mini { margin-top: 0; padding: .2rem .6rem; font-size: .75rem; }
+.attach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .5rem; }
+.attach-opt {
+  display: flex; align-items: center; gap: .55rem;
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: .4rem .6rem; cursor: pointer; background: #fff; margin: 0;
+  font-family: Verdana, sans-serif; font-size: .82rem;
+}
+.attach-opt img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.attach-opt small { display: block; color: #8a8d87; font-size: .72rem; }
+.attach-opt:has(input:checked) { border-color: var(--pine); box-shadow: 0 0 0 2px rgba(30,92,63,.18); }
+/* Camera capture on the profile page */
+.cam-row { margin: .6rem 0 0; }
+.cam-btn { margin-top: .4rem; }
+.cam-box { margin: 1rem 0; }
+.cam-box video {
+  width: 100%; max-width: 420px;
+  border-radius: 12px; border: 2px solid var(--pine);
+  background: #000;
+  transform: scaleX(-1);   /* mirror preview like a mirror/selfie cam */
+}
+.cam-actions { display: flex; gap: .6rem; }
+#cam-preview-wrap { display: flex; align-items: center; gap: .8rem; }

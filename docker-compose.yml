@@ -1,0 +1,66 @@
+x-app-env: &app-env
+  DB_HOST: db
+  DB_NAME: ${DB_NAME:-ssanta}
+  DB_USER: ${DB_USER:-ssanta}
+  DB_PASS: ${DB_PASS:?set DB_PASS in .env}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Secret Santa}
+  SITE_URL: ${SITE_URL:-}
+  PHOTO_MAX_MB: ${PHOTO_MAX_MB:-30}
+
+services:
+  app:
+    build: .
+    image: secret-santa:latest
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    environment: *app-env
+    volumes:
+      - config:/var/www/private/config
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Runs the reveal-email script every 5 minutes (same image, no Apache).
+  cron:
+    image: secret-santa:latest
+    restart: unless-stopped
+    entrypoint: >
+      sh -c 'while true; do
+        php /var/www/private/cron/send_reveal_emails.php || true;
+        sleep 300;
+      done'
+    environment: *app-env
+    volumes:
+      - config:/var/www/private/config
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-ssanta}
+      MARIADB_USER: ${DB_USER:-ssanta}
+      MARIADB_PASSWORD: ${DB_PASS:?set DB_PASS in .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:?set DB_ROOT_PASS in .env}
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  config:
+  uploads:
+  dbdata:

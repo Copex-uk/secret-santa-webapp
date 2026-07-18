@@ -1,0 +1,80 @@
+/* Festive auth pages — background art with the form card on top. */
+.auth-body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0a1226 url('site-bg.jpg') center / cover no-repeat fixed;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+.auth-veil {
+    position: fixed; inset: 0;
+    background: rgba(8, 18, 44, 0.35);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+}
+.auth-wrap {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 5vh 16px 8vh;
+}
+.auth-logo {
+    text-align: center; margin-bottom: 22px;
+    filter: drop-shadow(0 10px 26px rgba(0,0,0,.55));
+    user-select: none;
+}
+.auth-logo img { width: min(300px, 70vw); height: auto; }
+.auth-card {
+    background: #f7f5f0;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    width: 100%; max-width: 430px;
+    padding: 34px 34px 30px;
+    text-align: center;
+    box-sizing: border-box;
+}
+.auth-card .gift { font-size: 44px; line-height: 1; }
+.star-rule, .flake-rule {
+    display: flex; align-items: center; gap: 10px;
+    color: #c8a24a; margin: 10px 0 4px;
+}
+.flake-rule { color: #9aa7bd; margin-top: 22px; }
+.star-rule::before, .star-rule::after,
+.flake-rule::before, .flake-rule::after {
+    content: ''; flex: 1; height: 1px; background: currentColor; opacity: .5;
+}
+.auth-card h1 {
+    margin: 6px 0 4px; font-size: 30px; color: #1f2937;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.auth-sub { margin: 0 0 22px; color: #5b6472; font-size: 15.5px; }
+.input-ico { position: relative; margin: 0 0 14px; }
+.input-ico svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; color: #8b93a1; pointer-events: none;
+}
+.auth-card input[type="email"],
+.auth-card input[type="text"],
+.auth-card input[type="password"] {
+    width: 100%; box-sizing: border-box;
+    padding: 14px 14px 14px 44px;
+    font-size: 16px;
+    border: 1px solid #d7d3ca; border-radius: 12px;
+    background: #fff; color: #1f2937;
+    outline: none;
+}
+.auth-card input:focus { border-color: #c62828; box-shadow: 0 0 0 3px rgba(198,40,40,.12); }
+.btn-festive {
+    width: 100%; border: 0; cursor: pointer;
+    background: #c62828; color: #fff;
+    font-size: 17px; font-weight: 600;
+    padding: 14px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    box-shadow: 0 8px 20px rgba(198,40,40,.35);
+}
+.btn-festive:hover { background: #b71f1f; }
+.btn-festive svg { width: 18px; height: 18px; }
+.auth-alt { margin-top: 16px; font-size: 14.5px; }
+.auth-alt a { color: #2e6b46; font-weight: 600; }
+.auth-card .flash { text-align: left; }
+@media (max-width: 480px) {
+    .auth-card { padding: 26px 22px 24px; }
+}

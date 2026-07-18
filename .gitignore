@@ -1,0 +1,23 @@
+# --- Never commit personal or runtime data --------------------------------
+# Environment / credentials
+.env
+.env.*
+!.env.example
+
+# Wizard-written runtime config (DB + SMTP credentials, site settings)
+private/config/*
+!private/config/.gitkeep
+
+# User-uploaded selfie photos
+public_html/uploads/*
+!public_html/uploads/.htaccess
+!public_html/uploads/index.html
+
+# --- Housekeeping ----------------------------------------------------------
+*.log
+*.sql.gz
+*.tar.gz
+*.zip
+.DS_Store
+Thumbs.db
+node_modules/
