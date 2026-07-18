@@ -199,6 +199,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
 }
 
 /* ---- Remove from event --------------------------------------------------- */
+/* ---- Delete a user entirely --------------------------------------------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_user') {
+    $id = (int)($_POST['user_id'] ?? 0);
+    $sel = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+    $sel->execute([$id]);
+    if ($u = $sel->fetch()) {
+        /*
+         * Safeguard: deletion is only allowed once the person is fully
+         * detached — no active event memberships, no couple pairings, and
+         * no generated draw referencing them. This prevents accidentally
+         * shredding a live event.
+         */
+        $blockers = [];
+        $q = $pdo->prepare(
+            'SELECT GROUP_CONCAT(event_id) FROM event_users
+             WHERE user_id = ? AND status <> "removed"'
+        );
+        $q->execute([$id]);
+        if ($evs = $q->fetchColumn()) {
+            $blockers[] = "they are in event(s) #$evs — use \"Remove from event\" first";
+        }
+        $q = $pdo->prepare('SELECT COUNT(*) FROM relationships WHERE user_a_id = ? OR user_b_id = ?');
+        $q->execute([$id, $id]);
+        if ((int)$q->fetchColumn() > 0) {
+            $blockers[] = 'they are marked as part of a couple — remove the pair on the Relationships page first';
+        }
+        $q = $pdo->prepare('SELECT COUNT(*) FROM assignments WHERE buyer_user_id = ? OR recipient_user_id = ?');
+        $q->execute([$id, $id]);
+        if ((int)$q->fetchColumn() > 0) {
+            $blockers[] = 'they are part of a generated draw — re-run Generate for that event (or delete the event) first';
+        }
+
+        if ($blockers) {
+            flash_set('err', 'Cannot delete ' . e((string)$u['email']) . ': ' . implode('; ', $blockers) . '.');
+        } else {
+            // Their uploaded selfie (default avatars in /assets are untouched).
+            if (!empty($u['photo_path'])) {
+                delete_photo((string)$u['photo_path']);
+            }
+            $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
+            flash_set('ok', e((string)$u['email']) . ' deleted, along with their login codes and photo.');
+        }
+    }
+    redirect('/admin/users.php' . ($event ? '?event_id=' . (int)$event['id'] : ''));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'remove') {
     $id = (int)($_POST['id'] ?? 0);
     $eventId = (int)($_POST['event_id'] ?? 0);
@@ -354,6 +400,13 @@ if ($event && $attachable): ?>
                         onclick="return confirm('Remove from event #<?= (int)$event['id'] ?>?')">Remove from #<?= (int)$event['id'] ?></button>
             </form>
             <?php endif; ?>
+            <form method="post" class="inline-form"
+                  onsubmit="return confirm('PERMANENTLY delete <?= e($u['email']) ?>?\n\nOnly possible once they are not in any event, couple or generated draw. This cannot be undone.');">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="delete_user">
+                <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                <button type="submit" class="danger btn-mini" style="margin:0">Delete</button>
+            </form>
         </td>
     </tr>
     <?php endforeach; ?>
