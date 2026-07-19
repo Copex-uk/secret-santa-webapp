@@ -84,6 +84,8 @@ function user_login(int $userId): void
 {
     session_regenerate_id(true);
     $_SESSION['user_id'] = $userId;
+    db()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')
+        ->execute([$userId]);
 }
 
 function user_logout(): void

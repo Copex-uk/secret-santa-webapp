@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
     gender ENUM('male','female') NULL,
     photo_path VARCHAR(255) NULL,
     invited_at DATETIME NULL,
+    last_login_at DATETIME NULL,
     profile_complete TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

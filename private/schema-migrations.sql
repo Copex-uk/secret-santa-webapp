@@ -14,3 +14,6 @@ CREATE TABLE IF NOT EXISTS email_templates (
 
 -- v1.4: track when the invitation email was last sent
 ALTER TABLE users ADD COLUMN invited_at DATETIME NULL AFTER photo_path;
+
+-- v1.5: track when each user last logged in
+ALTER TABLE users ADD COLUMN last_login_at DATETIME NULL AFTER invited_at;
