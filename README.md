@@ -89,12 +89,12 @@ image rather than build from source, use `docker-compose.deploy.yml`.
 │   │   └── index.html
 │   ├── user/
 │   │   ├── dashboard.php         setup status / post-reveal "buying for" message
-│   │   └── profile.php           name + nickname + selfie upload
+│   │   └── profile.php           name + selfie (file, webcam or phone camera)
 │   └── admin/
 │       ├── login.php             setup wizard + password login + email MFA
 │       ├── dashboard.php
 │       ├── users.php             add by email, list, edit, photo re-upload
-│       ├── events.php            create events (email_send_at / reveal_at)
+│       ├── events.php            create / edit / delete events (reveal date+time, budget)
 │       ├── relationships.php     mark couple pairs per event
 │       ├── assign.php            generate assignments
 │       ├── assignments.php       masked view; unmask via password re-check
@@ -171,26 +171,39 @@ The pages locate `private/` relative to the webroot's parent directory
    ```
 
    (Some hosts use `/usr/bin/php`; check with `which php` in Terminal.)
-   The script picks up events whose `email_send_at` has passed and whose
-   assignments exist, emails every participant a "log in to see who you got"
-   nudge, and marks the event `emailed`. Failed batches retry on the next run.
+   The script emails every participant a "log in to see who you got" nudge
+   on the reveal date (09:00, or just after midnight for pre-9am reveals —
+   derived automatically from the reveal date/time you set on the event) and
+   marks the event `emailed`. Failed batches retry on the next run.
 
 ## Typical flow
 
-1. Admin logs in (password → 6-digit code emailed → verify).
-2. Admin creates an event with the email-send time and the reveal time.
-3. Admin adds participants by email on the Users page (attached to the event).
+1. Admin logs in (password → 6-digit code emailed → verify). Admin access
+   re-locks after 2 idle hours; participants stay logged in for
+   `SESSION_DAYS` (default 15).
+2. Admin creates an event: name, optional £ max gift spend (shown on the
+   reveal card), reveal date and reveal time.
+3. Admin adds participants by email with a default avatar (Female/Male) —
+   no emails are sent automatically. When ready, the per-user *Invite*
+   button or *Invite everyone* sends the invitation; the Users table shows
+   when each person was invited and when they last logged in.
 4. Each participant requests a login code at `/login.php`, enters it at
-   `/code.php`, and completes their profile (name, nickname, selfie ≤2MB).
+   `/code.php`, and completes their profile — just first/last name, since
+   the avatar already counts as their photo. Selfies are optional and can
+   be taken with a webcam or phone camera; large photos are downscaled
+   server-side and EXIF/GPS-stripped.
 5. Admin marks any couples on the Relationships page.
 6. Admin hits Generate — a perfect 1-to-1 cycle is produced (no self, no
    partners). If constraints make it impossible, a clear error is shown and
    nothing is saved.
-7. Cron sends the reveal emails at the scheduled time; after `reveal_at`,
-   each user's dashboard shows *"You are buying a present for: [nickname]"*
-   with the recipient's photo.
+7. The cron worker emails everyone on the reveal date. Dashboards show the
+   slot-machine card: "Please Standby" before the reveal day, "Come back
+   at HH:MM" on the day itself, and from the reveal moment the spin lands
+   on the recipient's photo and first name.
 8. On the admin Assignments page recipients are masked; unmasking requires
-   re-entering the admin password and lasts 60 minutes per session.
+   re-entering the admin password and lasts 60 minutes per session. All
+   emails (invitation, reveal, login code) are HTML-templated and editable
+   on the admin Emails page, with previews and test-sends.
 
 ## Security notes
 
@@ -203,8 +216,13 @@ The pages locate `private/` relative to the webroot's parent directory
   after use or 5 wrong attempts; issuing and verifying are throttled per
   email/IP via the `code_throttle` table.
 - The user login page answers identically for known and unknown addresses.
-- Uploads: extension + real MIME (finfo) + decodable-image checks, 2MB cap,
-  randomized filenames, script execution disabled in `/uploads`.
+- Uploads: extension + real MIME (finfo) + decodable-image checks, size cap
+  (`PHOTO_MAX_MB`, default 30 — images are downscaled to ≤1200px JPEG and
+  EXIF-stripped anyway), randomized filenames, script execution disabled in
+  `/uploads`.
+- Sessions: participants get a long-lived cookie (`SESSION_DAYS`, default
+  15) backed by a private session store; admin privilege expires after a
+  sliding 2-hour window regardless.
 - Recipient identities are never selected from the DB before `reveal_at`
   (user side) or without the unmask session flag (admin side) — masking is
   enforced in SQL, not just hidden in the UI.

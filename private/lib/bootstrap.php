@@ -113,9 +113,31 @@ function start_app_session(): void
     if (PHP_SAPI === 'cli' || session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
+    /*
+     * Persistent logins: participant sessions last SESSION_DAYS (default 15).
+     * The cookie lifetime alone is not enough — PHP's garbage collector
+     * deletes session files after ~24 minutes by default — so sessions are
+     * stored in a private directory with a matching gc_maxlifetime. Admin
+     * privilege is separately time-boxed in auth.php.
+     */
+    $sessionDays = (int)(env_str('SESSION_DAYS') ?? 15);
+    if ($sessionDays < 1 || $sessionDays > 90) {
+        $sessionDays = 15;
+    }
+    define('SESSION_LIFETIME', $sessionDays * 86400);
+    $sessDir = APP_PRIVATE . '/sessions';
+    if (!is_dir($sessDir)) {
+        @mkdir($sessDir, 0700, true);
+    }
+    if (is_dir($sessDir) && is_writable($sessDir)) {
+        ini_set('session.save_path', $sessDir);
+        ini_set('session.gc_maxlifetime', (string)SESSION_LIFETIME);
+        ini_set('session.gc_probability', '1');
+        ini_set('session.gc_divisor', '100');
+    }
     session_name('SSANTA_SESS');
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => SESSION_LIFETIME,
         'path'     => '/',
         'domain'   => '',
         'secure'   => is_https(),   // secure flag whenever we are on HTTPS
@@ -124,6 +146,19 @@ function start_app_session(): void
     ]);
     ini_set('session.use_strict_mode', '1');
     session_start();
+
+    // Sliding renewal: re-issue the cookie daily so active users never expire.
+    if (!isset($_SESSION['cookie_ts']) || time() - (int)$_SESSION['cookie_ts'] > 86400) {
+        $_SESSION['cookie_ts'] = time();
+        setcookie(session_name(), session_id(), [
+            'expires'  => time() + SESSION_LIFETIME,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => is_https(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
 }
 
 /* Graceful fallback if the mbstring extension is missing on the host. */

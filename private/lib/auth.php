@@ -9,7 +9,18 @@ declare(strict_types=1);
 
 function admin_logged_in(): bool
 {
-    return !empty($_SESSION['is_admin']) && !empty($_SESSION['admin_id']);
+    if (empty($_SESSION['is_admin']) || empty($_SESSION['admin_id'])) {
+        return false;
+    }
+    // Admin privilege expires after inactivity even though the underlying
+    // session cookie is long-lived (participants keep their 15 days).
+    if (time() > (int)($_SESSION['admin_ok_until'] ?? 0)) {
+        unset($_SESSION['is_admin'], $_SESSION['admin_id'],
+              $_SESSION['admin_ok_until'], $_SESSION['admin_unmask_until']);
+        return false;
+    }
+    $_SESSION['admin_ok_until'] = time() + ADMIN_SESSION_SECONDS;  // sliding
+    return true;
 }
 
 /** Gate for /admin/* pages (except login). */
@@ -32,11 +43,14 @@ function require_admin(): array
 }
 
 /** Establish the admin session after password + MFA both pass. */
+const ADMIN_SESSION_SECONDS = 7200;   // admin privilege: sliding 2-hour window
+
 function admin_login(int $adminId): void
 {
     session_regenerate_id(true);
     $_SESSION['admin_id'] = $adminId;
     $_SESSION['is_admin'] = 1;
+    $_SESSION['admin_ok_until'] = time() + ADMIN_SESSION_SECONDS;
     unset($_SESSION['admin_mfa_pending'], $_SESSION['mfa_attempts'], $_SESSION['admin_unmask_until']);
 }
 

@@ -11,6 +11,7 @@ x-app-env: &app-env
   SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Secret Santa}
   SITE_URL: ${SITE_URL:-}
   PHOTO_MAX_MB: ${PHOTO_MAX_MB:-30}
+  SESSION_DAYS: ${SESSION_DAYS:-15}
 
 services:
   app:
