@@ -1,9 +1,13 @@
 # Secret Santa — PHP 8.3 + Apache
 FROM php:8.3-apache
 
+# Container timezone — override at build or run time (TZ in .env).
+ARG TZ=Europe/London
+ENV TZ=${TZ}
+
 # Extensions: pdo_mysql for the DB, mbstring for length checks.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libonig-dev libjpeg62-turbo-dev libpng-dev curl \
+ && apt-get install -y --no-install-recommends libonig-dev libjpeg62-turbo-dev libpng-dev curl tzdata \
  && docker-php-ext-configure gd --with-jpeg \
  && docker-php-ext-install pdo_mysql mbstring gd exif \
  && apt-get purge -y --auto-remove libonig-dev libjpeg62-turbo-dev libpng-dev \

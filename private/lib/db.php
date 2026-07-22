@@ -29,11 +29,24 @@ function db(): PDO
 function make_pdo(string $host, string $name, string $user, string $pass): PDO
 {
     $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $host, $name);
-    return new PDO($dsn, $user, $pass, [
+    $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,   // real prepared statements
     ]);
+
+    /*
+     * Align the database session with PHP's timezone so NOW() and date()
+     * mean the same thing — otherwise reveals fire an hour out under BST.
+     */
+    try {
+        $offset = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))->format('P');
+        $pdo->exec("SET time_zone = '" . $offset . "'");
+    } catch (Throwable $t) {
+        // Non-fatal: fall back to the server default.
+    }
+
+    return $pdo;
 }
 
 /** Run schema.sql against a PDO handle (used once by the setup wizard). */

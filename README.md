@@ -212,6 +212,15 @@ The pages locate `private/` relative to the webroot's parent directory
    emails (invitation, reveal, login code) are HTML-templated and editable
    on the admin Emails page, with previews and test-sends.
 
+## Timezone
+
+Event dates and times are entered and displayed as local wall-clock times, so
+the containers must share your timezone. Set `TZ` in `.env` (default
+`Europe/London`); compose passes it to the app, cron and database, and the app
+aligns PHP and the MySQL session to match. Leave it wrong and reveals fire an
+hour out during BST — the classic symptom is a card still saying "come back at
+20:00" when it is already gone 20:00.
+
 ## Security notes
 
 - All queries use PDO prepared statements (`ATTR_EMULATE_PREPARES = false`).

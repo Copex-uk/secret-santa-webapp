@@ -20,6 +20,36 @@ $events = $pdo->query('SELECT * FROM events ORDER BY id DESC LIMIT 10')->fetchAl
 page_header('Admin dashboard', 'admin');
 flash_show();
 ?>
+<?php
+/* Server clock — also the diagnostic when reveals fire at the wrong hour. */
+$phpTz   = date_default_timezone_get();
+$phpNow  = new DateTime('now');
+$dbNowS  = (string)$pdo->query('SELECT NOW()')->fetchColumn();
+$dbNow   = DateTime::createFromFormat('Y-m-d H:i:s', $dbNowS) ?: $phpNow;
+$driftS  = abs($phpNow->getTimestamp() - $dbNow->getTimestamp());
+$inSync  = $driftS <= 60;
+$sysTz   = getenv('TZ') ?: '(TZ not set)';
+?>
+<div class="card">
+    <h2>🕐 Server time</h2>
+    <p style="font-size:1.15rem;margin:.2rem 0;">
+        <strong><?= e($phpNow->format('l j F Y, H:i:s')) ?></strong>
+        <span class="muted">(<?= e($phpTz) ?>)</span>
+    </p>
+    <p class="muted">
+        Database: <?= e($dbNowS) ?> · TZ env: <?= e($sysTz) ?>
+        <?php if ($inSync): ?>
+            · ✅ app and database agree
+        <?php else: ?>
+            · ⚠️ <strong>out of sync by <?= (int)round($driftS / 60) ?> minute(s)</strong> —
+            event reveals will fire at the wrong time. Set <code>TZ</code> in your
+            <code>.env</code> (e.g. <code>TZ=Europe/London</code>) and restart the containers.
+        <?php endif; ?>
+    </p>
+    <p class="muted">Event times you enter are treated as this clock's local time.
+       If the time above is not what your watch says, fix it before scheduling a reveal.</p>
+</div>
+
 <div class="card">
     <h2>How it all works</h2>
     <ol class="howto">

@@ -44,6 +44,18 @@ function app_installed(): bool
     return !empty($cfg['installed']);
 }
 
+/*
+ * Timezone: event times are entered and displayed as local wall-clock times,
+ * so PHP and the database must agree on what "now" means. Driven by the TZ
+ * environment variable (set in .env / compose); falls back to php.ini.
+ */
+(static function (): void {
+    $tz = getenv('TZ') ?: (ini_get('date.timezone') ?: 'UTC');
+    if ($tz !== '' && in_array($tz, timezone_identifiers_list(), true)) {
+        date_default_timezone_set($tz);
+    }
+})();
+
 /** Read an environment variable (empty string counts as unset). */
 function env_str(string $key): ?string
 {

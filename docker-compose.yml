@@ -12,6 +12,7 @@ x-app-env: &app-env
   SITE_URL: ${SITE_URL:-}
   PHOTO_MAX_MB: ${PHOTO_MAX_MB:-30}
   SESSION_DAYS: ${SESSION_DAYS:-15}
+  TZ: ${TZ:-Europe/London}
 
 services:
   app:
@@ -53,6 +54,7 @@ services:
       MARIADB_USER: ${DB_USER:-ssanta}
       MARIADB_PASSWORD: ${DB_PASS:?set DB_PASS in .env}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:?set DB_ROOT_PASS in .env}
+      TZ: ${TZ:-Europe/London}
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
