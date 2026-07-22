@@ -37,6 +37,16 @@ function email_template_defaults(): array
                 . '<p style="color:#7a6f5c;">Remember: don\'t tell a soul. 🤐</p>',
             'vars'    => ['first_name', 'email', 'event_name', 'login_url', 'reveal_time', 'reveal_date'],
         ],
+        'match' => [
+            'label'   => 'Match card (emails each person their giftee — optional)',
+            'subject' => '🎁 {{event_name}}: your Secret Santa match',
+            'body'    => '<h1 style="margin:0 0 12px;font-size:26px;color:#8e1f17;">Here it is, {{first_name}}!</h1>'
+                . '<p>Your match for <strong>{{event_name}}</strong> is on the card below.</p>'
+                . '{{card}}'
+                . '<p style="font-size:20px;">You are buying for <strong>{{recipient_name}}</strong>.</p>'
+                . '<p style="color:#7a6f5c;">Keep it to yourself — that is rather the point. 🤫</p>',
+            'vars'    => ['first_name', 'email', 'event_name', 'recipient_name', 'budget'],
+        ],
         'login_code' => [
             'label'   => 'Login code (sent when someone signs in)',
             'subject' => 'Your Secret Santa login code: {{code}}',
@@ -95,6 +105,11 @@ function render_email(string $key, array $vars): array
     [$subject, $body] = get_email_template($key);
 
     $loginUrl = (string)($vars['login_url'] ?? '');
+    $cardSrc = (string)($vars['card_src'] ?? 'cid:matchcard');
+    $vars['card'] = empty($vars['has_card']) ? '' :
+        '<p style="text-align:center;margin:22px 0;">'
+        . '<img src="' . htmlspecialchars($cardSrc, ENT_QUOTES) . '" alt="Your Secret Santa card" '
+        . 'style="width:100%;max-width:480px;border-radius:12px;"></p>';
     $vars['button'] = $loginUrl === '' ? '' :
         '<p style="text-align:center;margin:26px 0;">'
         . '<a href="' . htmlspecialchars($loginUrl, ENT_QUOTES) . '" '

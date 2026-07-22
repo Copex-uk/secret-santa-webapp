@@ -10,7 +10,7 @@ declare(strict_types=1);
  * Send a plain-text email through the SMTP server from config.
  * Returns true on success, false on failure (errors are logged, not shown).
  */
-function smtp_send(string $toEmail, string $subject, string $body, ?string $htmlBody = null): bool
+function smtp_send(string $toEmail, string $subject, string $body, ?string $htmlBody = null, array $inlineImages = []): bool
 {
     $cfg = config()['smtp'] ?? null;
     if (!$cfg) {
@@ -28,7 +28,8 @@ function smtp_send(string $toEmail, string $subject, string $body, ?string $html
             $toEmail,
             $subject,
             $body,
-            $htmlBody
+            $htmlBody,
+            $inlineImages
         );
         return true;
     } catch (Throwable $t) {
@@ -48,7 +49,8 @@ function smtp_send_raw(
     string $toEmail,
     string $subject,
     string $body,
-    ?string $htmlBody = null
+    ?string $htmlBody = null,
+    array $inlineImages = []
 ): void {
     if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
         throw new RuntimeException('Invalid recipient email.');
@@ -132,8 +134,7 @@ function smtp_send_raw(
     if ($htmlBody !== null) {
         // multipart/alternative: plain-text part first, HTML preferred.
         $boundary = 'b' . bin2hex(random_bytes(16));
-        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
-        $payload = "--$boundary\r\n"
+        $alt = "--$boundary\r\n"
             . "Content-Type: text/plain; charset=UTF-8\r\n"
             . "Content-Transfer-Encoding: 8bit\r\n\r\n"
             . $body . "\r\n"
@@ -142,6 +143,36 @@ function smtp_send_raw(
             . "Content-Transfer-Encoding: 8bit\r\n\r\n"
             . $htmlBody . "\r\n"
             . "--$boundary--";
+
+        if ($inlineImages) {
+            /*
+             * multipart/related wraps the alternative part plus any inline
+             * images, referenced from the HTML as <img src="cid:...">.
+             * Attached images display by default in most clients, unlike
+             * remote ones which are usually blocked.
+             */
+            $rel = 'r' . bin2hex(random_bytes(16));
+            $headers[] = 'Content-Type: multipart/related; boundary="' . $rel . '"';
+            $payload = "--$rel\r\n"
+                . 'Content-Type: multipart/alternative; boundary="' . $boundary . "\"\r\n\r\n"
+                . $alt . "\r\n";
+            foreach ($inlineImages as $cid => $img) {
+                $cidSafe  = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$cid) ?? 'img';
+                $mimeType = (string)($img['mime'] ?? 'image/png');
+                $mimeType = in_array($mimeType, ['image/png', 'image/jpeg'], true) ? $mimeType : 'image/png';
+                $payload .= "--$rel\r\n"
+                    . 'Content-Type: ' . $mimeType . "\r\n"
+                    . "Content-Transfer-Encoding: base64\r\n"
+                    . 'Content-ID: <' . $cidSafe . ">\r\n"
+                    . 'Content-Disposition: inline; filename="' . $cidSafe . '.'
+                    . ($mimeType === 'image/jpeg' ? 'jpg' : 'png') . "\"\r\n\r\n"
+                    . chunk_split(base64_encode((string)($img['data'] ?? '')), 76, "\r\n");
+            }
+            $payload .= "--$rel--";
+        } else {
+            $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+            $payload = $alt;
+        }
     } else {
         $headers[] = 'Content-Type: text/plain; charset=UTF-8';
         $headers[] = 'Content-Transfer-Encoding: 8bit';

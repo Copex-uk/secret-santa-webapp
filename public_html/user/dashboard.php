@@ -102,6 +102,11 @@ foreach ($events as $ev) {
             if (!empty($recipient['photo_path'])) {
                 $finalImg = APP_BASE . '/' . (string)$recipient['photo_path'];
             }
+            // Record the first viewing — the match emails wait for everyone.
+            $pdo->prepare(
+                'UPDATE assignments SET seen_at = NOW()
+                 WHERE event_id = ? AND buyer_user_id = ? AND seen_at IS NULL'
+            )->execute([$ev['id'], $user['id']]);
         }
     }
 

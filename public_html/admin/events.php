@@ -50,15 +50,16 @@ function validate_event_input(array &$errors): array
         $morning = (int)strtotime("$date 09:00");
         $sendTs  = ($revealTs > $morning) ? $morning : (int)strtotime("$date 00:05");
     }
-    return [$name !== '' ? $name : null, $budgetVal, $sendTs, $revealTs];
+    return [$name !== '' ? $name : null, $budgetVal, $sendTs, $revealTs,
+            (($_POST['auto_match_email'] ?? '') === '1') ? 1 : 0];
 }
 
 /* ---- Create ------------------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create') {
-    [$name, $budgetVal, $sendTs, $revealTs] = validate_event_input($errors);
+    [$name, $budgetVal, $sendTs, $revealTs, $autoMatch] = validate_event_input($errors);
     if (!$errors) {
-        $pdo->prepare('INSERT INTO events (name, budget, email_send_at, reveal_at) VALUES (?, ?, ?, ?)')
-            ->execute([$name, $budgetVal, date('Y-m-d H:i:s', $sendTs), date('Y-m-d H:i:s', $revealTs)]);
+        $pdo->prepare('INSERT INTO events (name, budget, email_send_at, reveal_at, auto_match_email) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$name, $budgetVal, date('Y-m-d H:i:s', $sendTs), date('Y-m-d H:i:s', $revealTs), $autoMatch]);
         $newId = (int)$pdo->lastInsertId();
         flash_set('ok', 'Event created — now add participants to it below.');
         redirect('/admin/users.php?event_id=' . $newId);
@@ -74,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     if (!$ev) {
         $errors[] = 'Event not found.';
     } else {
-        [$name, $budgetVal, $sendTs, $revealTs] = validate_event_input($errors);
+        [$name, $budgetVal, $sendTs, $revealTs, $autoMatch] = validate_event_input($errors);
         if (!$errors) {
             // Rescheduling the send time into the future after emails already
             // went out re-arms the cron for the new time.
@@ -84,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 $status = 'assigned';
                 $note = ' Reveal emails were re-armed and will be sent again at the new time.';
             }
-            $pdo->prepare('UPDATE events SET name = ?, budget = ?, email_send_at = ?, reveal_at = ?, status = ? WHERE id = ?')
-                ->execute([$name, $budgetVal, date('Y-m-d H:i:s', $sendTs), date('Y-m-d H:i:s', $revealTs), $status, $id]);
+            $pdo->prepare('UPDATE events SET name = ?, budget = ?, email_send_at = ?, reveal_at = ?, status = ?, auto_match_email = ? WHERE id = ?')
+                ->execute([$name, $budgetVal, date('Y-m-d H:i:s', $sendTs), date('Y-m-d H:i:s', $revealTs), $status, $autoMatch, $id]);
             flash_set('ok', 'Event updated.' . $note);
             redirect('/admin/events.php');
         }
@@ -142,6 +143,14 @@ foreach ($errors as $err) echo '<div class="flash err">' . e($err) . '</div>';
     <label>Reveal time — recipients become visible at this moment</label>
     <input type="time" name="reveal_time" required
            value="<?= $editing ? e(date('H:i', strtotime((string)$editing['reveal_at']))) : '' ?>">
+    <label class="attach-opt" style="max-width:max-content">
+        <input type="checkbox" name="auto_match_email" value="1"
+               <?= !empty($editing['auto_match_email']) ? 'checked' : '' ?>>
+        Email everyone their match card once <em>all</em> participants have seen their reveal
+    </label>
+    <p class="muted">Optional. The card names their giftee, so it only goes out after everyone
+       has already seen it on screen — no surprise is spoiled, but the secret does then live
+       in their inbox.</p>
     <button type="submit"><?= $editing ? 'Save changes' : 'Create event' ?></button>
     <?php if ($editing): ?> <a class="btn" href="<?= APP_BASE ?>/admin/events.php">Cancel</a><?php endif; ?>
 </form>

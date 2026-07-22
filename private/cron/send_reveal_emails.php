@@ -41,8 +41,7 @@ try {
     )->fetchAll();
 
     if (!$events) {
-        echo "Nothing due.\n";
-        exit;
+        echo "No reveal emails due.\n";
     }
 
     $siteUrl = rtrim((string)(config()['site_url'] ?? ''), '/');
@@ -82,6 +81,30 @@ try {
         } else {
             echo "Event #{$ev['id']}: sent $sent, FAILED $failed — will retry next run.\n";
         }
+    }
+    /*
+     * Second pass: events opted into automatic match cards, where the reveal
+     * has already happened, every participant has viewed it, and the cards
+     * have not gone out yet.
+     */
+    $auto = $pdo->query(
+        "SELECT * FROM events
+         WHERE auto_match_email = 1
+           AND match_emails_sent_at IS NULL
+           AND reveal_at <= NOW()"
+    )->fetchAll();
+
+    foreach ($auto as $ev) {
+        $prog = reveal_progress($pdo, (int)$ev['id']);
+        if ($prog['total'] === 0) {
+            continue;                       // nothing generated yet
+        }
+        if (!$prog['all_seen']) {
+            echo "Event #{$ev['id']}: {$prog['seen']}/{$prog['total']} have seen their reveal — waiting.\n";
+            continue;
+        }
+        $res = send_match_cards($pdo, $ev);
+        echo "Event #{$ev['id']}: everyone has looked — match cards sent {$res['sent']}, failed {$res['failed']}.\n";
     }
 } finally {
     $pdo->query("SELECT RELEASE_LOCK('ssanta_reveal_cron')");

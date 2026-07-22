@@ -196,11 +196,18 @@ The pages locate `private/` relative to the webroot's parent directory
 6. Admin hits Generate — a perfect 1-to-1 cycle is produced (no self, no
    partners). If constraints make it impossible, a clear error is shown and
    nothing is saved.
-7. The cron worker emails everyone on the reveal date. Dashboards show the
+7. *(Optional)* Match cards — a personalised card naming each person's
+   giftee, emailed as a keepsake. Tick **"Email everyone their match card
+   once all participants have seen their reveal"** on the event and the cron
+   sends them automatically the moment the last person has looked, so
+   nothing is spoiled. The Assignments page shows live progress
+   ("3 of 5 have seen their reveal") and has a manual send button for
+   sending immediately instead.
+8. The cron worker emails everyone on the reveal date. Dashboards show the
    slot-machine card: "Please Standby" before the reveal day, "Come back
    at HH:MM" on the day itself, and from the reveal moment the spin lands
    on the recipient's photo and first name.
-8. On the admin Assignments page recipients are masked; unmasking requires
+9. On the admin Assignments page recipients are masked; unmasking requires
    re-entering the admin password and lasts 60 minutes per session. All
    emails (invitation, reveal, login code) are HTML-templated and editable
    on the admin Emails page, with previews and test-sends.

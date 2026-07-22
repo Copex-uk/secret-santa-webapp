@@ -73,8 +73,14 @@ function sample_template_vars(string $key): array
         'login_url'   => ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/login.php',
         'reveal_time' => '20:00',
         'reveal_date' => '25 Dec 2026',
-        'code'        => '123456',
-        'ttl_minutes' => (string)CODE_TTL_MINUTES,
+        'code'           => '123456',
+        'ttl_minutes'    => (string)CODE_TTL_MINUTES,
+        'recipient_name' => 'Chris Kringle',
+        'budget'         => '£25',
+        'has_card'       => '1',
+        // Preview uses the plain artwork; real sends embed a personalised
+        // card as an inline attachment (cid:matchcard).
+        'card_src'       => ($siteUrl !== '' ? $siteUrl : '') . APP_BASE . '/assets/match-card.jpg',
     ];
 }
 
