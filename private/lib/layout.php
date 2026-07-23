@@ -93,3 +93,18 @@ function auth_input(string $svgPath, string $inner): string
         . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $svgPath . '</svg>'
         . $inner . '</div>';
 }
+
+/** Human-friendly "2 hours ago" style stamp. */
+function time_ago(string $datetime): string
+{
+    $ts = strtotime($datetime);
+    if ($ts === false) {
+        return '—';
+    }
+    $diff = time() - $ts;
+    if ($diff < 60)    { return 'just now'; }
+    if ($diff < 3600)  { return (int)floor($diff / 60) . 'm ago'; }
+    if ($diff < 86400) { return (int)floor($diff / 3600) . 'h ago'; }
+    if ($diff < 604800) { return (int)floor($diff / 86400) . 'd ago'; }
+    return date('j M', $ts);
+}

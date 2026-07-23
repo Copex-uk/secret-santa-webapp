@@ -371,7 +371,7 @@ if ($event && $attachable): ?>
 
 <h2>All users</h2>
 <table>
-    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Profile</th><th>Invited</th><th>Last login</th><th>Events (id:status)</th><th></th></tr>
+    <tr><th>Photo</th><th>Email</th><th>Name</th><th>Profile</th><th>Invited</th><th>Last login</th><th>Last seen</th><th>Events (id:status)</th><th></th></tr>
     <?php foreach ($users as $u): ?>
     <tr>
         <td><?php if (!empty($u['photo_path'])): ?>
@@ -382,6 +382,7 @@ if ($event && $attachable): ?>
         <td><?= (int)$u['profile_complete'] === 1 ? '✅' : '⏳' ?></td>
         <td class="muted"><?= !empty($u['invited_at']) ? '✉️ ' . e(date('j M H:i', strtotime((string)$u['invited_at']))) : '—' ?></td>
         <td class="muted"><?= !empty($u['last_login_at']) ? '🔑 ' . e(date('j M H:i', strtotime((string)$u['last_login_at']))) : 'never' ?></td>
+        <td class="muted"><?= !empty($u['last_seen_at']) ? '👁 ' . e(time_ago((string)$u['last_seen_at'])) : '—' ?></td>
         <td class="muted"><?= e($u['memberships'] ?? '') ?: '—' ?></td>
         <td>
             <a href="<?= APP_BASE ?>/admin/users.php?edit=<?= (int)$u['id'] ?>">Edit</a>

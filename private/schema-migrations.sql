@@ -36,3 +36,6 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_match_email TINYINT(1) NOT NULL
 
 -- v1.7: per-person record of which match cards were emailed
 ALTER TABLE assignments ADD COLUMN IF NOT EXISTS match_email_sent_at DATETIME NULL AFTER seen_at;
+
+-- v1.8: activity tracking, distinct from last login (long sessions)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at DATETIME NULL AFTER last_login_at;

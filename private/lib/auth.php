@@ -91,6 +91,19 @@ function require_user(): array
         user_logout();
         redirect('/login.php');
     }
+    /*
+     * Activity stamp. Long-lived sessions mean someone can use the app for
+     * days without logging in again, so track "last seen" separately from
+     * "last login". Written at most once every 5 minutes to keep page loads
+     * from turning into a write per request.
+     */
+    $now = time();
+    if ($now - (int)($_SESSION['seen_ts'] ?? 0) > 300) {
+        $_SESSION['seen_ts'] = $now;
+        db()->prepare('UPDATE users SET last_seen_at = NOW() WHERE id = ?')
+            ->execute([(int)$user['id']]);
+        $user['last_seen_at'] = date('Y-m-d H:i:s');
+    }
     return $user;
 }
 

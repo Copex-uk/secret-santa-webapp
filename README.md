@@ -186,7 +186,9 @@ The pages locate `private/` relative to the webroot's parent directory
 3. Admin adds participants by email with a default avatar (Female/Male) —
    no emails are sent automatically. When ready, the per-user *Invite*
    button or *Invite everyone* sends the invitation; the Users table shows
-   when each person was invited and when they last logged in.
+   when each person was invited, when they last logged in, and when they were
+   last active ("last seen" — useful because sessions last days, so a login
+   time alone goes stale).
 4. Each participant requests a login code at `/login.php`, enters it at
    `/code.php`, and completes their profile — just first/last name, since
    the avatar already counts as their photo. Selfies are optional and can
